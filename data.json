@@ -1,0 +1,20 @@
+{
+    "obj-files": [
+        {
+            "name": "chair",
+            "src": "assests/OBJ/chair.obj"
+        },
+        {
+            "name": "classic-office-table",
+            "src": "assests/OBJ/classic-office-table.obj"
+        },
+        {
+            "name": "Sofa",
+            "src": "assests/OBJ/sofa.obj"
+        },
+        {
+            "name": "office-table",
+            "src": "assests/OBJ/office-table.obj"
+        }
+    ]
+  }

@@ -1,0 +1,602 @@
+<!-- 
+COSC 3306 Section A - 24W 
+ Author: Trevor Maliro 
+ Student ID: 239498690
+ Date: 2023/12/04
+
+ Assignment4
+-->
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Three.js Project Template</title>
+        <style>
+            body { margin: 0; }
+            canvas { width: 100%; height: 100% }
+
+        </style>
+    </head>
+    <body>
+        
+
+        
+        <script type="module">
+            import * as THREE from 'https://unpkg.com/three@0.111.0/build/three.module.js';
+            import { OrbitControls } from 'https://unpkg.com/three@0.111.0/examples/jsm/controls/OrbitControls';
+            import { OBJLoader } from './OBJLoader.js';
+            import { ShaderPass} from 'https://unpkg.com/three@0.111.0/examples/jsm/postprocessing/ShaderPass.js';
+            import { RenderPass} from 'https://unpkg.com/three@0.111.0/examples/jsm/postprocessing/RenderPass.js';
+            import { EffectComposer} from 'https://unpkg.com/three@0.111.0/examples/jsm/postprocessing/EffectComposer.js';
+
+            
+
+            
+            
+
+            let scene, camera, renderer ;
+            let floor, floorGeometry, floorMaterial, floorTexture;
+            let wall, wallGeometry, wallMaterial, wallPositions;
+            let ambientLight, spotLight, wallTexture;
+            let controls, loader, raycaster, intersects, nextPosition;
+            let roof, roofGeometry, roofMaterial, roofTexture;
+            
+            let lantern, lantern2, lanternBody, lanternTop, bodyGeometry, bodyMaterial, topGeometry, topMaterial;
+            let BeastOBJ, chairOBJ, classicTableOBJ, humanBodyOBJ, kanepemab4fOBJ, officeTableOBJ, sofaOBJ, woodyOBJ;
+            let glassDoor, glassDoorGeometry, glassDoorMaterial, glassDoorTexture;
+            let skyTexture, skyMaterial;
+            let walls = []; 
+
+            let keys = {
+                ArrowUp: false,
+                ArrowDown: false,
+                ArrowLeft: false,
+                ArrowRight: false,
+            };
+
+            let wallWidth = 10;
+            let wallHeight = 10;
+            let wallDepth = 10;
+            let floorWidth = 1000;
+            let floorHeight = 1000;
+
+            const speed = 0.5;
+
+            /**
+             * Initializes the scene, camera, renderer, and event listeners.
+             */
+            function init() {
+                loader = new OBJLoader();
+                scene = new THREE.Scene();
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                camera.position.z = 0;
+
+                renderer = new THREE.WebGLRenderer();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                
+                document.body.appendChild(renderer.domElement);
+
+                // Add event listeners for keydown and keyup events
+                document.addEventListener('keydown', (e) => {
+                    if (keys.hasOwnProperty(e.code)) {
+                        keys[e.code] = true;
+                    }
+                });
+
+                document.addEventListener('keyup', (e) => {
+                    if (keys.hasOwnProperty(e.code)) {
+                        keys[e.code] = false;
+                    }
+                });
+
+                setupListeners_light(); // Set up listeners, camera position, controls, and lighting
+                setupworld(); // Set up the world by creating the maze floor
+                setupWalls_Sky(); // Set up the walls and sky in the scene
+                setGlassDoor(); // Set up a glass door in the scene
+                
+                setRoof(); // Set up the roof of the scene
+                setupSun(); // Set up the sun in the scene
+                createLantern(); // Create a lantern with a cylindrical body and a spherical top
+                //loadOBJs();
+                animate(); // Animate the scene
+            }
+
+            
+            let object_count = 0;
+            /**
+             * Loads multiple 3D object files and adds them to the scene.
+             * @param {Array} objFiles - An array of object files to load.
+             */
+            function loadOBJs( objFiles ){
+                // Load a 3D object
+                objFiles.forEach(obj => {
+                    loader.load(obj.src, (object) => {
+                        // Add the loaded object to the scene
+                        scene.add(object);
+                        console.log(obj.name + ' loaded successfully'); 
+                        object.castShadow = true;
+
+                        placeObj(obj, object); 
+                    },
+                    // Called when loading is in progress
+                    (xhr) => {
+                        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                    },
+                    // Called when loading has errors
+                    (error) => {
+                        console.error('An error happened while loading ' + obj.name);
+                    });
+                });
+                document.body.appendChild(renderer.domElement);
+            }
+
+            /**
+             * Function to place an object in a specific position and scale it accordingly.
+             * @param {Object} obj - The object to be placed.
+             * @param {Object3D} oObject - The three.js object representing the object to be placed.
+             */
+            function placeObj(obj, oObject){
+                console.log("\tOBJECT NAME\t"+obj.name);
+                switch(obj.name){
+                    case 'Beast':                        
+                        object.position.x = 20;
+                        object.position.y = -5;
+                        object.position.z = -40;
+                        object.scale.x = .1;
+                        object.scale.y = 0.5;
+                        object.scale.z = 0.1;
+                        break;
+                    case 'chair':
+                        oObject.position.x = 50;
+                        oObject.position.y = -1;
+                        oObject.position.z = -40;
+                        oObject.scale.x = .1;
+                        oObject.scale.y = 0.1;
+                        oObject.scale.z = 0.1;
+                        oObject.rotation.y = -Math.PI / 2;
+                        object.traverse( function (o) {
+                            if (o.isMesh){
+                                o.material.color.set(0xA52A2A);
+                            }
+                        });
+                        oObject.castShadow = true;
+                        break;
+                    case 'classic-office-table':
+                        oObject.position.x = -20;
+                        oObject.position.y = -5;
+                        oObject.position.z = -25;
+                        oObject.scale.x = .1;
+                        oObject.scale.y = 0.1;
+                        oObject.scale.z = 0.1;
+                        oObject.rotation.y = -Math.PI / 2;
+                        break;
+                    case 'humanBody':
+                        oObject.position.x = 0;
+                        oObject.position.y = 0;;
+                        oObject.position.z = 0;
+                        oObject.scale.x = .01;
+                        oObject.scale.y = .01;
+                        oObject.scale.z = .01;
+                        oObject.rotation.y = -Math.PI ;
+                        oObject.rotation.x = Math.PI / 2;
+                        break;
+                    case 'kanepemab4f':
+                        object.position.x = 40;
+                        object.position.y = -5;
+                        object.position.z = -60;
+                        object.scale.x = .1;
+                        object.scale.y = 0.05;
+                        object.scale.z = 0.1;
+                        break;
+                    case 'office-table':
+                        oObject.position.x = -45;
+                        oObject.position.y = -5;
+                        oObject.position.z = -30;
+                        oObject.scale.x = 0.1;
+                        oObject.scale.y = 0.1;
+                        oObject.scale.z = 0.1;
+                        oObject.rotation.y = -Math.PI / 2;
+                        break;
+                    case 'Sofa':
+                        oObject.position.x = 25;
+                        oObject.position.y = -5;
+                        oObject.position.z = -30;
+                        oObject.scale.x = 0.5;
+                        oObject.scale.y = 0.5;
+                        oObject.scale.z = 0.5;
+                        oObject.rotation.y = -Math.PI / 2;
+                        break;
+                    case 'woody':
+                        object.position.x = -50;
+                        object.position.y = -5;
+                        object.position.z = -70;
+                        object.scale.x = .01;
+                        object.scale.y = 0.005;
+                        object.scale.z = 0.01;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            /**
+             * Sets up the walls and sky in the scene.
+             * Loads the sky texture and applies it to the scene background.
+             * Calls the loadType1Texture() function to load additional textures.
+             */
+            function setupWalls_Sky(){
+                // Set up the sky
+                skyTexture= new THREE.TextureLoader().load('assests/images/sky.png');
+                skyMaterial = new THREE.MeshPhysicalMaterial({map: skyTexture /*color: 0x8B4513*/}); // Brown color
+                
+                scene.background = skyTexture;//new THREE.Color(0x87CEEB); // Blue color for sky
+                loadType1Texture();
+            }
+            
+            fetch('data.json')
+            .then(response => response.json())
+            .then(data => {
+                // 'data' is the JSON object from the file
+                loadOBJs(data['obj-files']);
+            })
+            .catch(error => console.error('Error loading JSON file:', error));
+
+            /**
+             * Sets up the sun in the scene.
+             */
+            function setupSun(){
+                // Create the sun
+                const sunGeometry = new THREE.SphereGeometry(5, 32, 32); // Adjust the size as needed
+                const sunMaterial = new THREE.MeshPhysicalMaterial({ color: 0xFFFF00, emissive: 0xFFFF00 });
+                const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+                sun.position.set(-300, 60, -500); // Adjust the position as needed
+                sun.castShadow = true; // Enable shadows for the sun
+                scene.add(sun);
+            }
+
+            /**
+             * Sets up the roof of the scene.
+             */
+            function setRoof(){
+                // Set up the roof
+                roofGeometry = new THREE.BoxGeometry(115, 65,10 );
+                roofTexture= new THREE.TextureLoader().load('assests/images/roof.png');
+                roofMaterial = new THREE.MeshPhysicalMaterial({map: roofTexture, transparent: false /*color: 0x8B4513*/}); // Brown color
+                
+                roof = new THREE.Mesh(roofGeometry, roofMaterial);
+                roof.rotation.x = Math.PI / 2;
+                roof.position.y = wallHeight*1.5;
+                roof.position.z = -30;
+                roof.castShadow = true;
+                roof.recieveShadow= false;
+                scene.add(roof);
+            }
+
+            /**
+             * Loads the type 1 texture for the walls and creates wall objects based on the specified positions and orientations.
+             */
+            function loadType1Texture(){
+                // Set up the walls
+                wallGeometry = new THREE.BoxGeometry(wallWidth, wallHeight*2 , 2);
+                wallTexture = new THREE.TextureLoader().load('assests/images/wall.png'); // Load your wall texture
+                wallMaterial = new THREE.MeshLambertMaterial ({map: wallTexture, transparent: false,});
+                wallPositions = [
+                    {x: 0, y: 0, z: -18, orientation: 'horizontal'}, // Door
+                    /* Front Left */
+                    {x: 10, y: 0, z: -10, orientation: 'horizontal'}, // front left edge of room
+                    {x: -10, y: 0, z: -10, orientation: 'horizontal'}, // front left edge of room
+                    {x: -20, y: 0, z: -10, orientation: 'horizontal'}, // front left edge of room
+                    {x: -30, y: 0, z: -10, orientation: 'horizontal'}, // front left edge of room
+                    {x: -40, y: 0, z: -10, orientation: 'horizontal'}, // front left edge of room
+                    {x: -50, y: 0, z: -10, orientation: 'horizontal'}, // front left edge of room
+                    /* Inside Edge */
+                    {x: 20, y: 0, z: -10, orientation: 'horizontal'}, // INSIDE EDGE
+                    {x: 30, y: 0, z: -10, orientation: 'horizontal'}, // INSIDE EDGE
+                    //{x: 40, y: 0, z: -10, orientation: 'horizontal'}, // INSIDE EDGE
+                    {x: 50, y: 0, z: -10, orientation: 'horizontal'}, // INSIDE EDGE
+                    /* Entrance */
+                    {x: 0, y: 0, z: -10, orientation: 'horizontal'}, // right entrance wall
+                    {x: -10, y: 0, z: -10, orientation: 'vertical'}, // left entrance wall
+                    {x: 10, y: 0, z: -10, orientation: 'vertical'}, // right entrance wall
+
+                    {x: -10, y: 0, z: -28, orientation: 'vertical'},
+                    {x: 10, y: 0, z: -18, orientation: 'horizontal'},
+                    {x: 20, y: 0, z: -48, orientation: 'vertical'}, // INSIDE EDGE
+                    /* Inside Edge */
+                    
+                    {x: 70, y: 0, z: -30, orientation: 'vertical'}, // inside edge 
+                    {x: 70, y: 0, z: -40, orientation: 'vertical'}, // inside edge
+                    {x: 70, y: 0, z: -50, orientation: 'vertical'}, // inside edge
+                    {x: 70, y: 0, z: -60, orientation: 'vertical'}, // right edge of room
+                    /* Front Right */
+                    {x: 110, y: 0, z: -30, orientation: 'vertical'}, // front right edge of room
+                    {x: 110, y: 0, z: -40, orientation: 'vertical'}, // front right edge of room
+                    {x: 110, y: 0, z: -50, orientation: 'vertical'}, // front right edge of room
+                    {x: 110, y: 0, z: -60, orientation: 'vertical'}, // front right edge of room
+                    {x: 110, y: 0, z: -70, orientation: 'vertical'}, // front right edge of room
+                    {x: 110, y: 0, z: -80, orientation: 'vertical'}, // front right edge of room
+                    {x: 110, y: 0, z: -90, orientation: 'vertical'}, // front right edge of room
+                    {x: 110, y: 0, z: -100, orientation: 'vertical'}, // front right edge of room
+                    /* Inside Edge */
+                    {x: -70, y: 0, z: -30, orientation: 'vertical'}, // inside edge
+                    {x: -70, y: 0, z: -40, orientation: 'vertical'}, // inside edge
+                    {x: -70, y: 0, z: -50, orientation: 'vertical'}, // inside edge
+                    {x: -70, y: 0, z: -60, orientation: 'vertical'}, // inside edge
+                    /* Left Edge */
+                    {x: -110, y: 0, z: -30, orientation: 'vertical'}, // left edge of room
+                    {x: -110, y: 0, z: -40, orientation: 'vertical'}, // left edge of room
+                    {x: -110, y: 0, z: -50, orientation: 'vertical'}, // left edge of room
+                    {x: -110, y: 0, z: -60, orientation: 'vertical'}, // left edge of room
+                    {x: -110, y: 0, z: -70, orientation: 'vertical'}, // left edge of room
+                    {x: -110, y: 0, z: -80, orientation: 'vertical'}, // left edge of room
+                    {x: -110, y: 0, z: -90, orientation: 'vertical'}, // left edge of room
+                    {x: -110, y: 0, z: -100, orientation: 'vertical'}, // left edge of room CORNER
+                    {x: -108, y: 0, z: -107.25, orientation: 'vertical'}, // right edge of room
+
+                    /* Back Left */               
+                    {x: -60, y: 0, z: -54.25, orientation: 'horizontal'}, // back left edge of room
+                    {x: -50, y: 0, z: -54.25, orientation: 'horizontal'}, // back left edge of room
+                    //{x: -40, y: 0, z: -54.25, orientation: 'horizontal'}, // back left edge of room
+                    {x: -30, y: 0, z: -54.25, orientation: 'horizontal'}, // back left edge of room
+                    {x: -20, y: 0, z: -54.25, orientation: 'horizontal'}, // back left edge of room
+                    {x: -10, y: 0, z: -54.25, orientation: 'horizontal'}, // back left edge of room
+                    /* Inside Edge */
+                    {x: 0, y: 0, z: -54.25, orientation: 'horizontal'}, // inside edge
+                    /* Back Right */
+                    //{x: 60, y: 0, z: -54.25, orientation: 'horizontal'}, // back right edge of room
+                    {x: 50, y: 0, z: -54.25, orientation: 'horizontal'}, // back right edge of room
+                    {x: 40, y: 0, z: -54.25, orientation: 'horizontal'}, // back right edge of room
+                    {x: 30, y: 0, z: -54.25, orientation: 'horizontal'}, // back right edge of room
+                    {x: 20, y: 0, z: -54.25, orientation: 'horizontal'}, // back right edge of room
+                    {x: 10, y: 0, z: -54.25, orientation: 'horizontal'}, // back right edge of room
+                ];
+                wallPositions.forEach(pos => {
+                    const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+                    switch(pos.orientation){
+                        case 'horizontal':
+                            wall.position.set(pos.x, pos.y, pos.z);
+                            break;
+                        case 'vertical':
+                            wall.rotation.y = Math.PI / 2;
+                            wall.position.set(pos.x/2, pos.y, pos.z/2);
+                            break;
+                    }
+                    wall.castShadow = true;
+                    //wall.recieveShadow= true;
+                    scene.add(wall);
+                    walls.push(wall);
+                });
+            }
+
+            /**
+             * Sets up a glass door in the scene.
+             */
+            function setGlassDoor(){
+                // Set up the floor
+                glassDoorGeometry = new THREE.BoxGeometry(wallWidth, wallHeight*2 , 2);
+                glassDoorTexture= new THREE.TextureLoader().load('assests/images/glass.png');
+                glassDoorMaterial = new THREE.MeshPhongMaterial ({
+                    map: glassDoorTexture,
+                    transparent: true, 
+                    opacity: 0.5,
+                    //envMap: environmentMap, // Assuming you have an environment map
+                    refractionRatio: 0.98,
+                    roughness: 0.1
+                }); // Brown color
+
+                glassDoor = new THREE.Mesh(glassDoorGeometry, glassDoorMaterial);
+                glassDoor.position.set(-40, 0, -54.25);
+                scene.add(glassDoor);
+            }
+
+            /**
+             * Creates a lantern with a cylindrical body and a spherical top.
+             */
+            function createLantern() {
+                // Create the lantern body (cylinder)
+                bodyGeometry = new THREE.CylinderGeometry(1, 1, 10, 32);
+                bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 }); // Dark brown color
+                lanternBody = new THREE.Mesh(bodyGeometry, bodyMaterial);
+                lanternBody.position.y = 0; // Position the base of the cylinder at y = 0
+
+                // Create the lantern top (sphere)
+                topGeometry = new THREE.SphereGeometry(1.2, 32, 32);
+                topMaterial = new THREE.MeshStandardMaterial({ color: 0xFFD700 }); // Gold color
+                lanternTop = new THREE.Mesh(topGeometry, topMaterial);
+                lanternTop.position.y = 6.0; // Position the sphere on top of the cylinder
+
+                // Create a group to hold the parts of the lantern
+                lantern = new THREE.Group();
+                lantern.add(lanternBody);
+                lantern.add(lanternTop);
+                lantern.position.set(50, 0, -50); // Position the lantern in the scene
+
+                lantern2 = lantern.clone();
+                
+                // Create a point light inside the lantern
+                const roomlight = new THREE.PointLight(0xFFA500, 1, 50); // Orange light
+                roomlight.position.y = 8; // Position the light inside the lantern
+                roomlight.castShadow = true; // Enable shadows for the light
+                roomlight.shadow.mapSize.width = 512; // default
+                roomlight.shadow.mapSize.height = 512; // default
+                roomlight.shadow.camera.near = 0.5; // default
+                roomlight.shadow.camera.far = 100; // default
+                roomlight.shadow.camera.fov = 30; // default
+                roomlight.shadow.bias = -0.005; // default
+                roomlight.intensity = 0.75; // Adjust the intensity as needed
+                lantern.add(roomlight);
+
+                lantern2 = lantern.clone();
+                lantern2.position.set(-40, 0, -15); // Position the lantern in the scene
+
+                scene.add(lantern); // Add the lantern to the scene
+                scene.add(lantern2); // Add the lantern to the scene
+            }
+
+            /**
+             * Sets up the world by creating the maze floor.
+             */
+            function setupworld(){
+                // Set up the maze floor
+                floorGeometry = new THREE.PlaneGeometry(floorWidth, floorHeight, 10, 10);
+                floorTexture= new THREE.TextureLoader().load('assests/images/floor.png');
+                floorMaterial = new THREE.MeshPhysicalMaterial({map: floorTexture /*color: 0x8B4513*/}); // Brown color
+                
+                floor = new THREE.Mesh(floorGeometry, floorMaterial);
+                floor.rotation.x = -Math.PI / 2;
+                floor.position.y = -5;
+                //floor.castShadow = true;
+                floor.recieveShadow= true;
+                scene.add(floor);
+            }
+
+            /**
+             * Sets up the listeners, camera position, controls, and lighting for the scene.
+             */
+            function setupListeners_light(){
+                // Set up the camera position
+                camera.position.y = 5;
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+
+                // Set up controls                
+                document.addEventListener('keydown', e => {
+                    if (keys.hasOwnProperty(e.code)) {
+                        keys[e.code] = true;
+                    }
+                });
+
+                document.addEventListener('keyup', e => {
+                    if (keys.hasOwnProperty(e.code)) {
+                        keys[e.code] = false;
+                    }
+                });
+
+                // Set up ambient light
+                ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                scene.add(ambientLight);
+
+                // Set up a spotlight
+                spotLight = new THREE.SpotLight(0xffffff, 550);
+                spotLight.position.set(-300, 60, -500); // Adjust the position as needed
+                spotLight.castShadow = true; // Enable shadows for the spotlight
+
+                // Set up shadow properties for the light
+                spotLight.shadow.mapSize.width = 512; // default
+                spotLight.shadow.mapSize.height = 512; // default
+                spotLight.shadow.camera.near = 0.5; // default
+                spotLight.shadow.camera.far = 550; // default
+
+                scene.add(spotLight);
+
+                // Optional: adjust the spotlight's properties for desired effect
+                spotLight.angle = Math.PI / 4;
+                spotLight.penumbra = 0.1;
+                spotLight.decay = 2;
+                spotLight.distance = 550;
+                spotLight.intensity = 0.3333;
+
+                camera.position.set(-40, 0, -57.25);
+            }
+
+            /**
+             * Checks for collision between the camera and walls in the scene.
+             * @param {THREE.Vector3} nextPosition - The next position of the camera.
+             * @returns {boolean} - True if collision is detected, false otherwise.
+             */
+            function checkCollision(nextPosition) {
+                raycaster = new THREE.Raycaster();
+                raycaster.ray.origin.copy(camera.position);
+                raycaster.ray.direction.set(nextPosition.x - camera.position.x, 0, nextPosition.z - camera.position.z).normalize();
+                intersects = raycaster.intersectObjects(walls);
+                console.log(intersects.length);
+                return intersects.length > 0;
+            }
+
+            function animate() {
+                requestAnimationFrame(animate);
+                nextPosition = camera.position.clone();
+
+                if (keys.ArrowUp) {
+                    //camera.position.z -= speed;
+                    camera.position.z -= speed * Math.cos(camera.rotation.y);
+                    camera.position.x -= speed * Math.sin(camera.rotation.y);
+                    //console.log("camera movement x"+camera.position.x+"\nz "+camera.position.z);  
+                    //if (!checkCollision(nextPosition)) {
+                        //camera.position.copy(nextPosition);                    
+                    //}                          
+                }
+
+                if (keys.ArrowDown) {
+                    //camera.position.z += speed;
+                    camera.position.z += speed * Math.cos(camera.rotation.y);
+                    camera.position.x += speed * Math.sin(camera.rotation.y);
+                    //console.log("camera movement x"+camera.position.x+"\nz "+camera.position.z);
+                    //if (!checkCollision(nextPosition)) {
+                        //camera.position.copy(nextPosition);                    
+                    //}                            
+                }
+
+                if (keys.ArrowLeft) {
+                    camera.rotation.y += 0.05;
+                }
+
+                if (keys.ArrowRight) {
+                    camera.rotation.y -= 0.05;
+                }
+
+                renderer.render(scene, camera);
+            }
+
+            
+            init();
+            
+            
+            let occlusionRenderTarget, occlusionComposer, composer;
+            let angle = 0,
+
+            DEFAULT_LAYER = 0,
+            OCCLUSION_LAYER = 1;
+
+
+            /**
+             * Sets up post-processing effects for the scene.
+             * This function creates an occlusion render target and composer,
+             * adds render passes and shader passes to the composers,
+             * and sets up the final composer for the lit scene.
+             */
+            function setupPostprocessing(){
+                var pass;
+                
+                // create the occlusion render target and composer
+                // to increase performance we only render the effect at 1/2 the screen size
+                occlusionRenderTarget = new THREE.WebGLRenderTarget( window.innerWidth , window.innerHeight  );
+                occlusionComposer = new THREE.EffectComposer( renderer, occlusionRenderTarget);
+                // add a scene render pass
+                occlusionComposer.addPass( new THREE.RenderPass( scene, camera ) );
+                // add the volumeteric shader pass that will automatically be applied
+                // to texture created by the scene render 
+                pass = new THREE.ShaderPass( THREE.VolumetericLightShader );
+                // since only one shader is used the front and back buffers do not need to be swapped
+                // after the shader does its work.
+                pass.needsSwap = false;
+                occlusionComposer.addPass( pass );
+                
+                // a second composer and render pass for the lit scene
+                composer = new THREE.EffectComposer( renderer );
+                composer.addPass( new THREE.RenderPass( scene, camera ) );
+                // an additive blending pass that takes as a uniform
+                // the resulting texture from the volumetric light shader 
+                pass = new THREE.ShaderPass( THREE.AdditiveBlendingShader );
+                pass.uniforms.tAdd.value = occlusionRenderTarget.texture;
+                composer.addPass( pass );
+                pass.renderToScreen = true;
+            }
+
+            
+           
+
+            
+        </script>
+    </body>
+</html>

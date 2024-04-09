@@ -1,0 +1,32 @@
+{
+        "name": "Beast",
+        "src": "assests/OBJ/beast.obj"
+      },
+      {
+        "name": "chair",
+        "src": "assests/OBJ/chair.obj"
+      },
+      {
+        "name": "classic-office-table",
+        "src": "assests/OBJ/classic-office-table.obj"
+      },
+      {
+        "name": "human",
+        "src": "assests/OBJ/humanbody.obj"
+      },
+      {
+        "name": "kanepemab4",
+        "src": "assests/OBJ/kanepemab4.obj"
+      },
+      {
+        "name": "office-table",
+        "src": "assests/OBJ/office-table.obj"
+      },
+      {
+        "name": "Sofa",
+        "src": "assests/OBJ/sofa.obj"
+      },
+      {
+        "name": "woody",
+        "src": "assests/OBJ/woody.obj"
+      }
