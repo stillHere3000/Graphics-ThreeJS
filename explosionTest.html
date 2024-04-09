@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three.js Animated GIF</title>
+    <style>
+        body { margin: 0; }
+    </style>
+</head>
+<body>
+    <script type="module">
+         import * as THREE from 'https://unpkg.com/three@0.111.0/build/three.module.js';
+        import { OrbitControls } from 'https://unpkg.com/three@0.111.0/examples/jsm/controls/OrbitControls';
+            
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Load your animated frames as textures
+        const frameCount = 30; // Adjust this based on the number of frames in your animation
+        const textures = [];
+        const textureLoader = new THREE.TextureLoader();
+
+        for (let i = 1; i <= frameCount; i++) {
+            const texture = textureLoader.load(`./explosion1/Explosion-frame${i}.png`);
+            textures.push(texture);
+        }
+
+        // Create a sprite using the first frame
+        const spriteMaterial = new THREE.SpriteMaterial({ map: textures[0] });
+        const sprite = new THREE.Sprite(spriteMaterial);
+        sprite.scale.set(4, 4, 1);
+        scene.add(sprite);
+
+        camera.position.z = 5;
+
+        let currentFrame = 0;
+
+        // Animation loop
+        const animate = () => {
+            requestAnimationFrame(animate);
+
+            // Update the texture for each frame
+            sprite.material.map = textures[currentFrame];
+            currentFrame = (currentFrame + 1) % frameCount;
+
+            renderer.render(scene, camera);
+        };
+
+        animate();
+    </script>
+</body>
+</html>

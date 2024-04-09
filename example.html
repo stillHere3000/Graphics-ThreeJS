@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Three.js Project Template</title>
+        <style>
+            body { margin: 0; }
+            canvas { width: 100%; height: 100% }
+        </style>
+    </head>
+    <body>
+        <script type="module">
+            // Import the Three.js module
+            import * as THREE from 'https://unpkg.com/three@0.111.0/build/three.module.js';
+            
+
+            // Create a new Three.js scene with camera and light
+            var camera, scene, renderer;
+            var pointLight, geometry, material, mesh;            
+
+            init(); // Initialize the world and scene            
+
+            // Render the scene:
+            renderer.render( scene, camera );
+
+            function createWorld(){
+                camera = new THREE.PerspectiveCamera(
+                            35, // Field of view, in degrees.
+                            800 / 600, // Aspect ratio
+                            0.1, // Near plane
+                            10000 // Far plane
+                            );
+
+                scene = new THREE.Scene();
+                renderer = new THREE.WebGLRenderer();
+                renderer.setSize( 800, 600 );
+                document.body.appendChild( renderer.domElement );
+                camera.position.x= 0; //default value anyway
+                camera.position.y= 0; //default value anyway
+                camera.position.z = 100;
+                camera.lookAt(scene.position); 
+
+                // Create player, bullet, stars, and enemies
+                createPlayer();
+                createBullet();
+                createStars();
+                createEnemies();
+
+                // Event listeners for keyboard
+                document.addEventListener('keydown', onDocumentKeyDown, false);
+
+                animate();
+                
+            }
+
+            function setupLight(){
+                pointLight = new THREE.PointLight(0xFFFFFF);
+                // set the light position:
+                pointLight.position.x = 10;
+                pointLight.position.y = 50;
+                pointLight.position.z = 100;
+                // add the light to the scene:
+                scene.add(pointLight);
+            }
+
+            function init(){
+                createWorld();
+                setupLight();
+                createShapes();
+            }
+
+            function createShapes(){
+                geometry = new THREE.Geometry();
+
+                geometry.vertices.push(new THREE.Vector3(-10, 0, 0));
+                geometry.vertices.push(new THREE.Vector3(0, 10, 0));
+                geometry.vertices.push(new THREE.Vector3(10, 0, 0));
+                material = new THREE.LineBasicMaterial({color: 0xCC0000});
+                var line = new THREE.Line(geometry, material);
+                scene.add(line);
+            }
+
+            function createPlayer() {
+                // Code to create player using Three.js primitives
+            }
+
+            function createBullet() {
+                // Code to create bullet
+            }
+
+            function createStars() {
+                // Code to create stars
+            }
+
+            function createEnemies() {
+                // Code to create enemies
+            }
+
+            function onDocumentKeyDown(event) {
+                // Handle keyboard input
+            }
+
+            function animate() {
+                requestAnimationFrame(animate);
+                // Update game logic
+                renderer.render(scene, camera);
+            }
+
+
+            // Your Three.js code goes here
+        </script>
+    </body>
+</html>

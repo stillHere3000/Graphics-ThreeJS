@@ -1,0 +1,476 @@
+<!-- 
+COSC 3306 Section A - 24W 
+ Author: Trevor Maliro 
+ Student ID: 239498690
+ Date: 2023/12/04
+-->
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Three.js Project Template</title>
+        <style>
+            body { margin: 0; }
+            canvas { width: 100%; height: 100% }
+
+            /*#scoreCanvas {
+                background-color: white;
+                font:Bold 20px Arial;
+                color: black;
+
+            }*/
+        </style>
+    </head>
+    <body>
+        <script type="module">
+            // Import the Three.js module
+            import * as THREE from 'https://unpkg.com/three@0.111.0/build/three.module.js';
+            import { OrbitControls } from 'https://unpkg.com/three@0.111.0/examples/jsm/controls/OrbitControls';
+            /*
+             *      COSC 3306 Section A - 24W
+             *      Author: Trevor Maliro
+             *      Student ID: 239498690
+             *      Date: 2023/12/04
+             * 
+             * */
+            
+            //import { OrbitControls } from '/OrbitControls.js';
+
+            // Create a new Three.js scene with camera and light
+
+            /* THREE.js global variables for scene ,alienships spaceship rendering */
+            var camera, scene, renderer, oGLspaceship, alienTexture1 , alienTexture2, alienMaterial;
+            var pointLight, spaceshipGeometry, spaceshipTexture, spaceshipMaterial, mesh, alienGeometry;
+            var alienShip, alienShips, oGLssFireArray, oGLssFire, ssLaserFireGeometry, ssLaserFireTexture, ssLaserFireMaterial;
+            oGLssFireArray = [20]; var oGLexplodeArray= [20]; //array to hold spaceship fire
+            var totalBullets=0; 
+            var totalExplode=0;
+            /* THREE.js global variables for scoreboard */
+            var score, scoreCanvas, scoreContext, scoreTexture, scoreMaterial, scoreSprite; 
+            var  oGLexplode, explodeGeometry, explodeTexture, explodeMaterial, spriteMaterial, sprite; 
+            var TotalFrameCount = 26; // Adjust this based on the number of frames in your animation
+            var ExplosionTextures = [26];    var ExplosionMap= new Map();  
+            var ExplosionInstances= [20];
+            var frameCounterArray=[26];    
+
+            // Spaceship movement directions
+            const move = {
+                up: false,
+                down: false,
+                left: false,
+                right: false
+            };
+
+            // Alien movement directions
+            const alienmove = {
+                
+                down: true,
+                left: false,
+                right: false
+            }
+
+            // Boundaries for the entire map
+            const boundaries = {
+                minX: -7,
+                maxX: 7,
+                minY: -5,
+                maxY: 0
+            };
+
+            init(); // Initialize the world and scene
+
+            class Explosions {
+                static texture = null;
+                static frameCount = 0;
+
+                constructor(texture, frameCount) {
+                    Explosions.texture = texture;
+                    Explosions.frameCount = frameCount;
+                }
+
+                static getTexture() {
+                    return Explosions.texture;
+                }
+
+                static getFrameCount() {
+                    return Explosions.frameCount;
+                }
+            }
+
+            /*
+                Function: init()
+                Description: Initializes the application by creating the scene, drawing shapes, and setting up the game.
+            */
+            function init(){
+                createScene();
+                DrawShapes();
+                setupGame();
+                setupScoreBoard();
+            }
+
+            /**
+             * Creates a scene, camera, and renderer for the 3D application.
+             */
+            function createScene(){
+                // Create the scene, camera, and renderer
+                scene = new THREE.Scene();
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                renderer = new THREE.WebGLRenderer();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                document.body.appendChild(renderer.domElement);
+
+                // Load the background texture
+                const loader = new THREE.TextureLoader();
+                loader.load(
+                        'background.jpg', function(texture) {
+                        scene.background = texture;
+                    });
+            }
+            
+
+            /**
+             * Draws shapes on the HTML canvas.
+             * @function DrawShapes
+             * @returns {void}
+             */
+            function DrawShapes(){
+                // Add orbit controls to the camera
+                //const controls = new OrbitControls(camera, renderer.domElement);
+
+                // Create a plane to apply the texture
+                const spaceshipGeometry = new THREE.PlaneGeometry(1, 1); // Adjust size as needed
+                const spaceshipTexture = new THREE.TextureLoader().load('spaceship.png'); // Replace with the path to your image file
+                const spaceshipMaterial = new THREE.MeshBasicMaterial({ 
+                    map: spaceshipTexture, 
+                    transparent: true //, Enable transparency
+                    //alphaTest: 0.5 // Adjust this value based on your texture to handle the black background
+                });
+                oGLspaceship = new THREE.Mesh(spaceshipGeometry, spaceshipMaterial);
+                scene.add(oGLspaceship);
+
+                
+
+
+            }
+            
+            /**
+             * Sets up the game by configuring the camera position and adding event listeners for keydown and keyup events.
+             * Also calls the animate function to start the game loop and adds aliens to the game.
+             */
+            function setupGame(){
+                // Set the camera position so that the plane is visible
+                camera.position.z = 10;            
+
+                // Event listeners for keydown
+                document.addEventListener('keydown', function(event) {
+                    switch (event.code) {
+                        case 'ArrowUp':     move.up = true;     break;
+                        case 'ArrowDown':   move.down = true;   break;
+                        case 'ArrowLeft':   move.left = true;   break;
+                        case 'ArrowRight':  move.right = true;  break;
+                        case 'Space':       fireMissile();      break;
+                    }
+                });
+
+                // Event listeners for keyup
+                document.addEventListener('keyup', function(event) {
+                    switch (event.code) {
+                        case 'ArrowUp':     move.up = false;        break;
+                        case 'ArrowDown':   move.down = false;      break;
+                        case 'ArrowLeft':   move.left = false;      break;
+                        case 'ArrowRight':  move.right = false;     break;
+                    }
+                });
+                addAliens();
+                // Call the animate function to start the loop
+                animate();
+                
+
+            } // End of setupGame
+
+            
+            /**
+             * Function to animate the spaceship's movement based on key presses.
+             */
+            function animate() {
+                requestAnimationFrame(animate);
+                //controls.update(); // Only required if controls.enableDamping = true, or if controls.autoRotate = true
+                // Update spaceship position based on key presses
+                if (move.up && oGLspaceship.position.y < boundaries.maxY ){
+                    oGLspaceship.position.y += 0.1;
+                }
+                    
+                if (move.down && oGLspaceship.position.y > boundaries.minY ){ 
+                    oGLspaceship.position.y -= 0.1;
+                }
+
+                if (move.left && oGLspaceship.position.x > boundaries.minX - 1.0){
+                    //alert(spaceship.position.x + " " + spaceship.position.y + " " + spaceship.position.z);
+                    oGLspaceship.position.x -= 0.1;
+                } 
+
+                if (move.right && oGLspaceship.position.x < boundaries.maxX){
+                    oGLspaceship.position.x += 0.1;
+                } 
+                
+                 let j= oGLexplodeArray.length; //let oExp;
+                if (totalExplode > 0){
+                    
+                    //alert(ExplosionInstances[0].frameCount);
+                    for (let i = 0; i < j; i++) {
+                        //alert(ExplosionInstances[i]);
+                        
+                        //alert( "FrameCounter "+ ExplosionInstances[i].frameCount );
+                        if (frameCounterArray[i] < TotalFrameCount){
+                            //alert( "FrameCounter "+ ExplosionInstances[i].frameCount );
+                            oGLexplodeArray[i].material.map = ExplosionTextures[frameCounterArray[i]+1];
+                            frameCounterArray[i]= frameCounterArray[i] + 1;
+                        }
+                    }
+
+                }
+                renderer.render(scene, camera);
+                //moveAliens();
+                //moveBullets();
+                
+            }
+
+            /**
+             * Function to add aliens to the scene.
+             * Adds 20 alien ships to the scene with random positions.
+             * @returns {void}
+             */
+            function addAliens(){
+                // Add aliens to the scene
+                // Add 20 alien ships
+                alienShips = [20];
+                alienTexture1 = new THREE.TextureLoader().load('Evil-spaceship2.png'); // Replace with the path to your alien ship texture
+                alienTexture2 = new THREE.TextureLoader().load('Evil-spaceship2.png'); // Replace with the path to your alien ship texture
+                
+               let j = 0; let k = 0
+                for (let i = 0; i < 20; i++) {
+                    alienMaterial = new THREE.MeshBasicMaterial({ map: alienTexture1, transparent: true });
+                    alienGeometry = new THREE.PlaneGeometry(1, 1); // Smaller size for alien ships
+                    alienShip = new THREE.Mesh(alienGeometry, alienMaterial);
+                    alienShip.position.set(
+                        boundaries.minX +1.00*k, // Random position in X within the spread
+                        6.0 - 1.0*j, // Random position in Y within the spread
+                        0
+                    ); k++;
+                    
+                    scene.add(alienShip);
+                    alienShips[i] =alienShip;
+                    if ( i == 9){
+                        j = 1; k = 0;
+                    }
+                }
+                
+            }
+
+            /**
+             * Function to setup the score board.
+             */
+            function setupScoreBoard(){
+                // Score variables
+                score = 0;
+                scoreCanvas = document.createElement('canvas');
+                scoreCanvas.id = 'scoreCanvas';
+                scoreCanvas.width = 250; // Size of the canvas
+                scoreCanvas.height = 200;
+                scoreContext = scoreCanvas.getContext('2d');
+                scoreTexture = new THREE.CanvasTexture(scoreCanvas);
+                scoreMaterial = new THREE.SpriteMaterial({ map: scoreTexture });
+                scoreSprite = new THREE.Sprite(scoreMaterial);
+                scene.add(scoreSprite);
+                            
+
+                // Position the score on the top left
+                scoreSprite.position.set(-8.5, 7.0, -0.5); // Adjust this position based on the camera and scene setup
+                //scoreSprite.scale.set(2, 1, 1); // Scale the sprite as needed
+                updateScore();
+
+                //setInterval to move aliens
+                setInterval(moveAliens, 150);
+                setInterval(moveBullets, 80);
+                
+                //setInterval(checkCollisions, 80);
+            }
+            
+            /*
+                Function: updateScore
+                Description: Updates the score on the canvas.
+                Parameters: None
+                Returns: None
+            */
+            function updateScore() {
+                scoreContext = scoreCanvas.getContext('2d');
+                
+                if(scoreContext){
+                    //ScoreContext.beginPath();
+                    //alert("Score: " + scoreContext);
+                    scoreContext.fillStyle = '#FFF'; // White text color
+                    scoreContext.font = 'Bold 44px Arial'; // Modify as needed
+                    scoreContext.clearRect(0, 0, scoreCanvas.width*2, scoreCanvas.height);
+                    let oSTRscore = "Score: " + score;
+                    scoreContext.fillText(oSTRscore, 0, 60); // Position the text on the canvas
+                    
+                    scoreTexture.needsUpdate = true; // Important to update the texture
+                }
+                
+            }
+
+            /**
+             * Moves the alien ships within the game.
+             */
+            function moveAliens(){
+                var otempShip;
+                // Move the aliens
+                let j = alienShips.length;
+                for (let i = 0; i < j; i++) {
+                    otempShip = alienShips[i]; //alert( alienShips[i]);
+                    if (otempShip.position.y > boundaries.minY) {
+                        otempShip.position.y -= 0.1; // Move the alien ships down
+                    }
+                    if ( alienmove.left){
+                        alienShips[i].position.x -= 0.1; // Move the alien ships right
+                        alienmove.right = true;
+                        alienmove.left = false;
+                    }
+                    else { //missle.jpeg
+                        alienShips[i].position.x += 0.1; // Move the alien ships left
+                        alienmove.right = false;
+                        alienmove.left = true;
+                    }  
+                }
+                
+            }
+
+            /**
+             * Moves the bullets of the alien ships.
+             * If there are no bullets, the function returns early.
+             * Each bullet is moved down by 0.1 units on the y-axis.
+             */
+            function moveBullets(){
+                try{
+                    let j = oGLssFireArray.length;
+                    if( oGLssFireArray.length == 0) return;
+                    for (let i = 0; i < j; i++) {
+                        if( oGLssFireArray[i] && oGLssFireArray[i].position && oGLssFireArray[i].position.y ){
+                            oGLssFireArray[i].position.y += 0.1; // Move the alien ships down
+                            if (oGLssFireArray[i].position.y > 9) {
+                                scene.remove(oGLssFireArray[i]);
+                                oGLssFireArray.splice(i, 1);
+                            }
+                        }
+                    }
+                    checkCollisions();
+                }catch(e){
+                    //alert(e);
+                }
+            }
+
+            /*
+            *   This function checks for collisions between alien ships and fired 
+            *   projectiles. It iterates through each alien ship and each fired 
+            *   projectile to check if their positions overlap.
+            *   If a collision is detected, the score is increased by 10, 
+            *   the alien ship and projectile are removed from the scene,
+            *   and an explosion effect is shown.
+            *               
+            */
+            function checkCollisions(){
+                try {
+                    if (oGLssFireArray.length == 0) return;
+                    for (let i = 0; i < alienShips.length; i++) {
+                        for (let j = 0; j < oGLssFireArray.length; j++) {
+                            if ( alienShips[i] && oGLssFireArray[j] 
+                                && (Math.abs(alienShips[i].position.x - oGLssFireArray[j].position.x) < alienShips[i].geometry.parameters.width/2) 
+                                && Math.abs( alienShips[i].position.y - oGLssFireArray[j].position.y) < alienShips[i].geometry.parameters.height/2){ 
+                                //alert("Collision");
+                                score += 10;
+                                updateScore();
+                                showExplode(alienShips[i]);
+                                scene.remove(alienShips[i]);
+                                alienShips.splice(i, 1);
+                                //oGLssFireArray.splice(i, 1);
+                                
+                                scene.remove(oGLssFireArray[j]);
+                                
+                                //return;
+                            }
+                        }
+                    }
+                }catch(e){
+                    //alert(e);
+                }
+            }
+
+            /**
+             * Function to show explosion effect.
+             * @param {Object} oTempShip - The ship object.
+             */
+            function showExplode( oTempShip){   
+                try {
+                    for (let i = 1; i <= TotalFrameCount; i++) {
+                        const texture = new THREE.TextureLoader().load(`Explosion-frame${i}.png`);
+                        ExplosionTextures[i]= texture;
+                    }                    
+                    // Create a sprite using the texture
+                    spriteMaterial = new THREE.SpriteMaterial({ map: ExplosionTextures });
+                    oGLexplode = new THREE.Sprite(spriteMaterial);
+                    
+                    oGLexplodeArray[totalExplode]= oGLexplode;
+                    frameCounterArray[totalExplode]= 0;
+                    
+                    //alert("ShowExplode2");
+
+                    ExplosionInstances[totalExplode]= oGLexplode
+                    //alert("ShowExplode");
+            
+                    //alert( "FrameCounter "+ frameCounterArray[totalExplode]);
+                    
+                    totalExplode++;                    
+                    
+                    oGLexplode.position.set(
+                        oTempShip.position.x, // explosion position X of where ship use to be
+                        oTempShip.position.y, // explosion position Y of where ship use to be
+                        0
+                    );
+                    scene.add(oGLexplode);
+                   
+                }catch(e){
+                    //alert(e);
+                }
+                
+            }
+
+            /**
+             * Function to fire a missile from the spaceship.
+             */
+            function fireMissile(){               
+                
+                const ssLaserFireGeometry = new THREE.PlaneGeometry(0.50, 0.50); // Adjust size as needed
+                const ssLaserFireTexture = new THREE.TextureLoader().load('laserFireUP.png'); // Replace with the path to your image file
+                const ssLaserFireMaterial = new THREE.MeshBasicMaterial({ 
+                    map: ssLaserFireTexture, 
+                    transparent: true //, Enable transparency
+                    //alphaTest: 0.5 // Adjust this value based on your texture to handle the black background
+                });
+                oGLssFire = new THREE.Mesh(ssLaserFireGeometry, ssLaserFireMaterial);
+
+                oGLssFire.position.set(
+                    oGLspaceship.position.x, // use X position of spaceship
+                    oGLspaceship.position.y + 0.5, // use Y position of spaceship
+                    0
+                );
+                oGLssFireArray[totalBullets]= oGLssFire;
+                totalBullets++;
+                scene.add(oGLssFire);
+            }
+
+
+
+            // Your Three.js code goes here
+        </script>
+    </body>
+</html>

@@ -65,7 +65,8 @@
     "optionator": "^0.9.1",
     "serve-index": "^1.9.1",
     "server-destroy": "^1.0.1",
-    "servez-lib": "^2.6.0"
+    "servez-lib": "^2.6.0",
+    "three": "^0.160.1"
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
