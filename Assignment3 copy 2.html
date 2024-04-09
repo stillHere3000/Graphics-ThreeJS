@@ -1,0 +1,172 @@
+<!-- 
+COSC 3306 Section A - 24W 
+ Author: Trevor Maliro 
+ Student ID: 239498690
+ Date: 2023/12/04
+
+ Assignment3
+-->
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Three.js Project Template</title>
+        <style>
+            body { margin: 0; }
+            canvas { width: 100%; height: 100% }
+
+        </style>
+    </head>
+    <body>
+        <script type="module">
+            // Import the Three.js module
+            import * as THREE from 'https://unpkg.com/three@0.111.0/build/three.module.js';
+            import { OrbitControls } from 'https://unpkg.com/three@0.111.0/examples/jsm/controls/OrbitControls';
+            
+            let scene, camera, renderer ;
+            let floor, floorGeometry, floorMaterial;
+            let wall, wallGeometry, wallMaterial, wallPositions;
+            let ambientLight, spotLight, wallTexture;
+            let controls;
+            
+            
+
+            const keys = {
+                ArrowUp: false,
+                ArrowDown: false,
+                ArrowLeft: false,
+                ArrowRight: false,
+            };
+
+            let wallWidth = 10;
+            let wallHeight = 10;
+            init();
+            setupworld();
+            seupWalls_Sky();
+            
+            setupListeners_light();
+
+        
+        // Set up the scene, camera, and renderer
+        
+        function init(){
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+        }
+
+        function setupworld(){
+            // Set up the maze floor
+            floorGeometry = new THREE.PlaneGeometry(1000, 1000);
+            floorMaterial = new THREE.MeshBasicMaterial({color: 0x8B4513}); // Brown color
+            floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -5;
+            scene.add(floor);
+        }
+
+        function seupWalls_Sky(){
+            // Set up the sky
+            scene.background = new THREE.Color(0x87CEEB); // Blue color
+
+            // Set up the walls
+            wallGeometry = new THREE.BoxGeometry(wallWidth, wallHeight , 2);
+            wallTexture = new THREE.TextureLoader().load('wall.jpg'); // Load your wall texture
+            wallMaterial = new THREE.MeshBasicMaterial({map: wallTexture});
+            wallPositions = [
+                {x: 0, y: 0, z: -15.75, orientation: 'horizontal'}, // Door
+                {x: 10, y: 0, z: -10,orientation: 'horizontal'},
+                {x: -10, y: 0, z: -10,orientation: 'horizontal'},
+                {x: -20, y: 0, z: -10,orientation: 'horizontal'},
+                {x: -30, y: 0, z: -10,orientation: 'horizontal'},
+                {x: -40, y: 0, z: -10,orientation: 'horizontal'},
+                {x: -50, y: 0, z: -10,orientation: 'horizontal'},// left edge of room
+                {x: 20, y: 0, z: -10,orientation: 'horizontal'},
+                {x: 30, y: 0, z: -10,orientation: 'horizontal'},
+                {x: 40, y: 0, z: -10,orientation: 'horizontal'},
+                {x: 50, y: 0, z: -10,orientation: 'horizontal'}, // right edge of room
+                {x: -10, y: 0, z: -10,orientation: 'vertical'}, // left wall
+                {x: 10, y: 0, z: -10,orientation: 'vertical'}, // right wall
+                {x: -10, y: 0, z: -20,orientation: 'vertical'},
+
+
+                // Add more wall positions here
+            ];
+            wallPositions.forEach(pos => {
+                const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+                switch(pos.orientation){
+                    case 'horizontal':
+                        wall.position.set(pos.x, pos.y, pos.z);
+                        break;
+                    case 'vertical':
+                        wall.rotation.y = Math.PI / 2;
+                        wall.position.set(pos.x/2, pos.y, pos.z/2);
+                        break;
+                }
+                scene.add(wall);
+            });
+        }
+
+        function setupListeners_light(){
+            // Set up the camera position
+            camera.position.y = 5;
+
+            // Set up controls
+            
+            document.addEventListener('keydown', e => {
+                if (keys.hasOwnProperty(e.code)) {
+                    keys[e.code] = true;
+                }
+            });
+            document.addEventListener('keyup', e => {
+                if (keys.hasOwnProperty(e.code)) {
+                    keys[e.code] = false;
+                }
+            });
+            // Set up lighting
+            ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+            spotLight = new THREE.SpotLight(0xffffff, 1);
+            spotLight.position.set(0, 30, 0);
+            scene.add(spotLight);
+        }
+
+        
+
+        
+
+        
+        
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Handle keyboard controls
+            const speed = 0.2;
+            if (keys.ArrowUp) {
+                camera.position.z -= speed * Math.cos(camera.rotation.y);
+                camera.position.x -= speed * Math.sin(camera.rotation.y);
+            }
+            if (keys.ArrowDown) {
+                camera.position.z += speed * Math.cos(camera.rotation.y);
+                camera.position.x += speed * Math.sin(camera.rotation.y);
+            }
+            if (keys.ArrowLeft) {
+                camera.rotation.y += 0.05;
+            }
+            if (keys.ArrowRight) {
+                camera.rotation.y -= 0.05;
+            }
+
+            renderer.render(scene, camera);
+        }
+        animate();
+           
+
+            
+        </script>
+    </body>
+</html>

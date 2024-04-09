@@ -1,0 +1,395 @@
+<!-- 
+COSC 3306 Section A - 24W 
+ Author: Trevor Maliro 
+ Student ID: 239498690
+ Date: 2023/12/04
+
+ Assignment3
+-->
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Three.js Project Template</title>
+        <style>
+            body { margin: 0; }
+            canvas { width: 100%; height: 100% }
+
+        </style>
+    </head>
+    <body>
+        <script type="module">
+            // Import the Three.js module
+            import * as THREE from 'https://unpkg.com/three@0.111.0/build/three.module.js';
+            import { OrbitControls } from 'https://unpkg.com/three@0.111.0/examples/jsm/controls/OrbitControls';
+            import { OBJLoader } from './OBJLoader.js';
+            
+            let scene, camera, renderer ;
+            let floor, floorGeometry, floorMaterial;
+            let wall, wallGeometry, wallMaterial, wallPositions;
+            let ambientLight, spotLight, wallTexture;
+            let controls, loader, raycaster, intersects;
+            let walls = []; 
+            
+            
+
+            const keys = {
+                ArrowUp: false,
+                ArrowDown: false,
+                ArrowLeft: false,
+                ArrowRight: false,
+            };
+
+            let wallWidth = 10;
+            let wallHeight = 10;
+            init();
+            setupworld();
+            seupWalls_Sky();
+            
+            setupListeners_light();
+
+        
+        // Set up the scene, camera, and renderer
+        
+        /**
+         * Initializes the scene, camera, renderer, and loads a 3D object.
+         */
+        function init(){
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            loader = new OBJLoader();
+
+            // Load a 3D object
+            loader.load(
+                // Resource URL
+                'beast.obj',
+                // Called when the resource is loaded
+                function ( object ) {
+                    object.position.x = 20;
+                    object.position.y = -5;
+                    object.position.z = -40;
+                    object.scale.x = .1;
+                    object.scale.y = 0.05;
+                    object.scale.z = 0.1;
+
+                    scene.add( object );
+                },
+                // Called when loading is in progress
+                function ( xhr ) {
+                    console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+                },
+                // Called when loading has errors
+                function ( error ) {
+                    console.log( 'An error happened' );
+                }
+            );
+
+            document.body.appendChild(renderer.domElement);
+        }
+
+        /**
+         * Sets up the world by creating the maze floor.
+         */
+        function setupworld(){
+            // Set up the maze floor
+            floorGeometry = new THREE.PlaneGeometry(1000, 1000);
+            floorMaterial = new THREE.MeshBasicMaterial({color: 0x8B4513}); // Brown color
+            floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -5;
+            scene.add(floor);
+        }
+
+        /**
+         * Sets up the walls and sky for the scene.
+         * This function sets the background color of the scene to a blue color representing the sky.
+         * It also loads two types of textures for the walls.
+         */
+        function seupWalls_Sky(){
+            // Set up the sky
+            scene.background = new THREE.Color(0x87CEEB); // Blue color for sky
+            loadType1Texture();
+            loadType2Texture();
+        }
+
+        /**
+         * Loads the type 1 texture for the maze walls, and displays them in the scene.
+         */
+        function loadType1Texture(){
+            // Set up the walls
+            wallGeometry = new THREE.BoxGeometry(wallWidth, wallHeight , 2);
+            wallTexture = new THREE.TextureLoader().load('wall.jpg'); // Load your wall texture
+            wallMaterial = new THREE.MeshBasicMaterial({map: wallTexture});
+            wallPositions = [
+                {x: 0, y: 0, z: -18, orientation: 'horizontal'}, // Door
+                /* Front Left */
+                {x: 10, y: 0, z: -10, orientation: 'horizontal'}, // front left edge of room
+                {x: -10, y: 0, z: -10, orientation: 'horizontal'}, // front left edge of room
+                {x: -20, y: 0, z: -10, orientation: 'horizontal'}, // front left edge of room
+                {x: -30, y: 0, z: -10, orientation: 'horizontal'}, // front left edge of room
+                {x: -40, y: 0, z: -10, orientation: 'horizontal'}, // front left edge of room
+                {x: -50, y: 0, z: -10, orientation: 'horizontal'}, // front left edge of room
+                /* Inside Edge */
+                {x: 20, y: 0, z: -10, orientation: 'horizontal'}, // INSIDE EDGE
+                {x: 30, y: 0, z: -10, orientation: 'horizontal'}, // INSIDE EDGE
+                {x: 40, y: 0, z: -10, orientation: 'horizontal'}, // INSIDE EDGE
+                {x: 50, y: 0, z: -10, orientation: 'horizontal'}, // INSIDE EDGE
+                /* Entrance */
+                {x: -10, y: 0, z: -10, orientation: 'vertical'}, // left entrance wall
+                {x: 10, y: 0, z: -10, orientation: 'vertical'}, // right entrance wall
+
+                {x: -10, y: 0, z: -28, orientation: 'vertical'},
+                {x: 10, y: 0, z: -18, orientation: 'horizontal'},
+                {x: 20, y: 0, z: -48, orientation: 'vertical'}, // INSIDE EDGE
+                /* Inside Edge */
+                
+                {x: 70, y: 0, z: -30, orientation: 'vertical'}, // inside edge 
+                {x: 70, y: 0, z: -40, orientation: 'vertical'}, // inside edge
+                {x: 70, y: 0, z: -50, orientation: 'vertical'}, // inside edge
+                {x: 70, y: 0, z: -60, orientation: 'vertical'}, // right edge of room
+                /* Front Right */
+                {x: 110, y: 0, z: -30, orientation: 'vertical'}, // front right edge of room
+                {x: 110, y: 0, z: -40, orientation: 'vertical'}, // front right edge of room
+                {x: 110, y: 0, z: -50, orientation: 'vertical'}, // front right edge of room
+                {x: 110, y: 0, z: -60, orientation: 'vertical'}, // front right edge of room
+                {x: 110, y: 0, z: -70, orientation: 'vertical'}, // front right edge of room
+                {x: 110, y: 0, z: -80, orientation: 'vertical'}, // front right edge of room
+                {x: 110, y: 0, z: -90, orientation: 'vertical'}, // front right edge of room
+                {x: 110, y: 0, z: -100, orientation: 'vertical'}, // front right edge of room
+                /* Inside Edge */
+                {x: -70, y: 0, z: -30, orientation: 'vertical'}, // inside edge
+                {x: -70, y: 0, z: -40, orientation: 'vertical'}, // inside edge
+                {x: -70, y: 0, z: -50, orientation: 'vertical'}, // inside edge
+                {x: -70, y: 0, z: -60, orientation: 'vertical'}, // inside edge
+                /* Left Edge */
+                {x: -110, y: 0, z: -30, orientation: 'vertical'}, // left edge of room
+                {x: -110, y: 0, z: -40, orientation: 'vertical'}, // left edge of room
+                {x: -110, y: 0, z: -50, orientation: 'vertical'}, // left edge of room
+                {x: -110, y: 0, z: -60, orientation: 'vertical'}, // left edge of room
+                {x: -110, y: 0, z: -70, orientation: 'vertical'}, // left edge of room
+                {x: -110, y: 0, z: -80, orientation: 'vertical'}, // left edge of room
+                {x: -110, y: 0, z: -90, orientation: 'vertical'}, // left edge of room
+                {x: -110, y: 0, z: -100, orientation: 'vertical'}, // left edge of room CORNER
+                //{x: -108, y: 0, z: -107.25, orientation: 'vertical'}, // right edge of room
+
+                /* Back Left */               
+                //{x: -60, y: 0, z: -54.25, orientation: 'horizontal'}, // back left edge of room
+                {x: -50, y: 0, z: -54.25, orientation: 'horizontal'}, // back left edge of room
+                //{x: -40, y: 0, z: -54.25, orientation: 'horizontal'}, // back left edge of room
+                {x: -30, y: 0, z: -54.25, orientation: 'horizontal'}, // back left edge of room
+                {x: -20, y: 0, z: -54.25, orientation: 'horizontal'}, // back left edge of room
+                {x: -10, y: 0, z: -54.25, orientation: 'horizontal'}, // back left edge of room
+                /* Inside Edge */
+                {x: 0, y: 0, z: -54.25, orientation: 'horizontal'}, // inside edge
+                /* Back Right */
+                //{x: 60, y: 0, z: -54.25, orientation: 'horizontal'}, // back right edge of room
+                {x: 50, y: 0, z: -54.25, orientation: 'horizontal'}, // back right edge of room
+                {x: 40, y: 0, z: -54.25, orientation: 'horizontal'}, // back right edge of room
+                {x: 30, y: 0, z: -54.25, orientation: 'horizontal'}, // back right edge of room
+                {x: 20, y: 0, z: -54.25, orientation: 'horizontal'}, // back right edge of room
+                {x: 10, y: 0, z: -54.25, orientation: 'horizontal'}, // back right edge of room
+            ];
+            wallPositions.forEach(pos => {
+                const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+                switch(pos.orientation){
+                    case 'horizontal':
+                        wall.position.set(pos.x, pos.y, pos.z);
+                        break;
+                    case 'vertical':
+                        wall.rotation.y = Math.PI / 2;
+                        wall.position.set(pos.x/2, pos.y, pos.z/2);
+                        break;
+                }
+                scene.add(wall);
+                walls.push(wall);
+            });
+        }
+
+        /**
+         * Loads the type 2 texture for the walls and creates wall meshes based on the specified positions and orientations.
+         */
+        function loadType2Texture(){
+            // Set up the walls
+            wallGeometry = new THREE.BoxGeometry(wallWidth, wallHeight , 2);
+            wallTexture = new THREE.TextureLoader().load('wall2.jpg'); // Load your wall texture
+            wallMaterial = new THREE.MeshBasicMaterial({map: wallTexture});
+            wallPositions = [
+                {x: 0, y: 0, z: -18, orientation: 'horizontal'}, // Door
+                /* Front Left */
+                // {x: 10, y: 0, z: -10,orientation: 'horizontal'},// front left edge of room
+                // {x: -10, y: 0, z: -10,orientation: 'horizontal'},// front left edge of room
+                // {x: -20, y: 0, z: -10,orientation: 'horizontal'},// front left edge of room
+                // {x: -30, y: 0, z: -10,orientation: 'horizontal'},// front left edge of room
+                // {x: -40, y: 0, z: -10,orientation: 'horizontal'},// front left edge of room
+                // {x: -50, y: 0, z: -10,orientation: 'horizontal'},// front left edge of room
+                /* Inside Edge */
+                // {x: 20, y: 0, z: -10,orientation: 'horizontal'}, // INSIDE EDGE
+                // {x: 30, y: 0, z: -10,orientation: 'horizontal'}, // INSIDE EDGE
+                // {x: 40, y: 0, z: -10,orientation: 'horizontal'}, // INSIDE EDGE
+                // {x: 50, y: 0, z: -10,orientation: 'horizontal'}, // INSIDE EDGE
+                // /* Entrance */
+                {x: -10, y: 0, z: -10, orientation: 'vertical'}, // left entrance wall
+                {x: 10, y: 0, z: -10, orientation: 'vertical'}, // right entrance wall
+
+                {x: -10, y: 0, z: -28, orientation: 'vertical'},
+                {x: 10, y: 0, z: -18, orientation: 'horizontal'},
+                {x: 20, y: 0, z: -48, orientation: 'vertical'}, // INSIDE EDGE
+                /* Inside Edge */
+                
+                {x: 70, y: 0, z: -30, orientation: 'vertical'}, // inside edge 
+                {x: 70, y: 0, z: -40, orientation: 'vertical'}, // inside edge
+                {x: 70, y: 0, z: -50, orientation: 'vertical'}, // inside edge
+                {x: 70, y: 0, z: -60, orientation: 'vertical'}, // right edge of room
+                /* Front Right */
+                // {x: 110, y: 0, z: -30,orientation: 'vertical'}, // front right edge of room
+                // {x: 110, y: 0, z: -40,orientation: 'vertical'}, // front right edge of room
+                // {x: 110, y: 0, z: -50,orientation: 'vertical'}, // front right edge of room
+                // {x: 110, y: 0, z: -60,orientation: 'vertical'}, // front right edge of room
+                // {x: 110, y: 0, z: -70,orientation: 'vertical'}, // front right edge of room
+                // {x: 110, y: 0, z: -80,orientation: 'vertical'}, // front right edge of room
+                // {x: 110, y: 0, z: -90,orientation: 'vertical'}, // front right edge of room
+                // {x: 110, y: 0, z: -100,orientation: 'vertical'}, // front right edge of room
+                /* Inside Edge */
+                {x: -70, y: 0, z: -30, orientation: 'vertical'}, // inside edge
+                {x: -70, y: 0, z: -40, orientation: 'vertical'}, // inside edge
+                {x: -70, y: 0, z: -50, orientation: 'vertical'}, // inside edge
+                {x: -70, y: 0, z: -60, orientation: 'vertical'}, // inside edge
+                /* Left Edge */
+                // {x: -110, y: 0, z: -30,orientation: 'vertical'}, // left edge of room
+                // {x: -110, y: 0, z: -40,orientation: 'vertical'}, // left edge of room
+                // {x: -110, y: 0, z: -50,orientation: 'vertical'}, // left edge of room
+                // {x: -110, y: 0, z: -60,orientation: 'vertical'}, // left edge of room
+                // {x: -110, y: 0, z: -70,orientation: 'vertical'}, // left edge of room
+                // {x: -110, y: 0, z: -80,orientation: 'vertical'}, // left edge of room
+                // {x: -110, y: 0, z: -90,orientation: 'vertical'}, // left edge of room
+                // {x: -110, y: 0, z: -100,orientation: 'vertical'}, // left edge of room CORNER
+                //{x: -108, y: 0, z: -107.25,orientation: 'vertical'}, // right edge of room
+
+                /* Back Left */               
+                //{x: -60, y: 0, z: -54.25,orientation: 'horizontal'}, // back left edge of room
+                {x: -50, y: 0, z: -54.25, orientation: 'horizontal'}, // back left edge of room
+                //{x: -40, y: 0, z: -54.25,orientation: 'horizontal'}, // back left edge of room
+                // {x: -30, y: 0, z: -54.25,orientation: 'horizontal'}, // back left edge of room
+                // {x: -20, y: 0, z: -54.25,orientation: 'horizontal'}, // back left edge of room
+                // {x: -10, y: 0, z: -54.25,orientation: 'horizontal'}, // back left edge of room
+                /* Inside Edge */
+                {x: 0, y: 0, z: -54.25, orientation: 'horizontal'}, // inside edge
+                /* Back Right */
+                //{x: 60, y: 0, z: -54.25,orientation: 'horizontal'}, // back right edge of room
+                // {x: 50, y: 0, z: -54.25,orientation: 'horizontal'}, // back right edge of room
+                // {x: 40, y: 0, z: -54.25,orientation: 'horizontal'}, // back right edge of room
+                // {x: 30, y: 0, z: -54.25,orientation: 'horizontal'}, // back right edge of room
+                // {x: 20, y: 0, z: -54.25,orientation: 'horizontal'}, // back right edge of room
+                // {x: 10, y: 0, z: -54.25,orientation: 'horizontal'}, // back right edge of room
+            ];
+            wallPositions.forEach(pos => {
+                const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+                switch(pos.orientation){
+                    case 'horizontal':
+                        wall.position.set(pos.x, pos.y, pos.z);
+                        break;
+                    case 'vertical':
+                        wall.rotation.y = Math.PI / 2;
+                        wall.position.set(pos.x/2, pos.y, pos.z/2);
+                        break;
+                }
+                scene.add(wall);
+                walls.push(wall);
+            });
+        }
+
+        /**
+         * Checks for collision between the camera and walls in the scene.
+         * @param {THREE.Vector3} nextPosition - The next position of the camera.
+         * @returns {boolean} - True if collision is detected, false otherwise.
+         */
+         function checkCollision(nextPosition) {
+            raycaster = new THREE.Raycaster();
+            raycaster.ray.origin.copy(camera.position);
+            raycaster.ray.direction.set(nextPosition.x - camera.position.x, 0, nextPosition.z - camera.position.z).normalize();
+            intersects = raycaster.intersectObjects(walls);
+            return intersects.length > 0;
+        }
+
+
+        /**
+         * Sets up the listeners, camera position, controls, ambient light, and spotlight for the scene.
+         */
+        function setupListeners_light(){
+            // Set up the camera position
+            camera.position.y = 5;
+
+            // Set up controls
+            
+            document.addEventListener('keydown', e => {
+                if (keys.hasOwnProperty(e.code)) {
+                    keys[e.code] = true;
+                }
+            });
+            document.addEventListener('keyup', e => {
+                if (keys.hasOwnProperty(e.code)) {
+                    keys[e.code] = false;
+                }
+            });
+            // Set up ambient light
+            ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            // Set up a spotlight
+            spotLight = new THREE.SpotLight(0xffffff, 1);
+            spotLight.position.set(30, 30, -40); // Adjust the position as needed
+            spotLight.castShadow = true; // Enable shadows for the spotlight
+            scene.add(spotLight);
+
+            // Optional: adjust the spotlight's properties for desired effect
+            spotLight.angle = Math.PI / 4;
+            spotLight.penumbra = 0.1;
+            spotLight.decay = 2;
+            spotLight.distance = 200;
+        }
+
+        // Animation loop
+        /**
+         * Function to animate the scene and handle keyboard controls for camera movement.
+         */
+        function animate() {
+            requestAnimationFrame(animate);            
+            const nextPosition = camera.position.clone();
+
+            // Handle keyboard controls
+            const speed = 0.2;
+            if (keys.ArrowUp) {
+                camera.position.z -= speed * Math.cos(camera.rotation.y);
+                camera.position.x -= speed * Math.sin(camera.rotation.y);
+                //if (!checkCollision(nextPosition)) {
+                //camera.position.copy(nextPosition);
+                console.log("x: " + camera.position.x + " z: " + camera.position.z);
+                //}
+            }
+            if (keys.ArrowDown) {
+                camera.position.z += speed * Math.cos(camera.rotation.y);
+                camera.position.x += speed * Math.sin(camera.rotation.y);
+                //if (!checkCollision(nextPosition)) {
+                //camera.position.copy(nextPosition);
+                console.log("x: " + camera.position.x + " z: " + camera.position.z);
+                //}
+            }
+            if (keys.ArrowLeft) {
+                camera.rotation.y += 0.05;
+            }
+            if (keys.ArrowRight) {
+                camera.rotation.y -= 0.05;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+           
+
+            
+        </script>
+    </body>
+</html>
