@@ -1,6 +1,8 @@
 <h1>House Scene Overview</h1>
 
 <img src="Screenshot_House.png" />
+<img src="Screenshot_House2.png" />
+
 This project template is designed to create a 3D scene using Three.js. It includes features such as object loading, lighting, camera controls, and post-processing effects. The scene is set up with a floor, walls, a roof, a glass door, and lanterns to create an interactive environment.
 
 Features
